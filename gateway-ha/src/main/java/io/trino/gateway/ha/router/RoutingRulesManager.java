@@ -13,80 +13,57 @@
  */
 package io.trino.gateway.ha.router;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.trino.gateway.ha.config.HaGatewayConfiguration;
+import io.trino.gateway.ha.config.RoutingRulesConfiguration;
 import io.trino.gateway.ha.domain.RoutingRule;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
-
 public class RoutingRulesManager
+        implements IRoutingRulesManager
 {
-    private final String rulesConfigPath;
+    private final IRoutingRulesManager routingRulesManager;
 
     @Inject
-    public RoutingRulesManager(HaGatewayConfiguration configuration)
+    public RoutingRulesManager(
+            HaGatewayConfiguration configuration,
+            FileRoutingRulesManager fileRoutingRulesManager,
+            DatabaseRoutingRulesManager databaseRoutingRulesManager)
     {
-        this.rulesConfigPath = configuration.getRoutingRules().getRulesConfigPath();
+        RoutingRulesConfiguration routingRulesConfig = configuration.getRoutingRules();
+        if (routingRulesConfig.isRulesEngineEnabled()) {
+            switch (routingRulesConfig.getRulesType()) {
+                case DATABASE -> this.routingRulesManager = databaseRoutingRulesManager;
+                default -> this.routingRulesManager = fileRoutingRulesManager;
+            }
+        }
+        else {
+            this.routingRulesManager = fileRoutingRulesManager;
+        }
     }
 
+    @Override
     public List<RoutingRule> getRoutingRules()
     {
-        YAMLFactory yamlFactory = new YAMLFactory();
-        ObjectMapper yamlReader = new ObjectMapper(yamlFactory);
-        ImmutableList.Builder<RoutingRule> routingRulesBuilder = ImmutableList.builder();
-        try {
-            String content = Files.readString(Path.of(rulesConfigPath), UTF_8);
-            YAMLParser parser = yamlFactory.createParser(content);
-            while (parser.nextToken() != null) {
-                RoutingRule routingRule = yamlReader.readValue(parser, RoutingRule.class);
-                routingRulesBuilder.add(routingRule);
-            }
-            return routingRulesBuilder.build();
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException("Failed to read or parse routing rules configuration from path : " + rulesConfigPath, e);
-        }
+        return routingRulesManager.getRoutingRules();
     }
 
-    public synchronized List<RoutingRule> updateRoutingRule(RoutingRule routingRule)
+    @Override
+    public List<RoutingRule> updateRoutingRule(RoutingRule routingRule)
     {
-        ImmutableList.Builder<RoutingRule> updatedRoutingRulesBuilder = ImmutableList.builder();
-        List<RoutingRule> currentRoutingRulesList = getRoutingRules();
-        Path path = Path.of(rulesConfigPath);
-        try (FileChannel fileChannel = FileChannel.open(path, WRITE, READ);
-                FileLock lock = fileChannel.lock()) {
-            ObjectMapper yamlWriter = new ObjectMapper(new YAMLFactory());
-            StringBuilder yamlContent = new StringBuilder();
-            for (RoutingRule rule : currentRoutingRulesList) {
-                if (rule.name().equals(routingRule.name())) {
-                    yamlContent.append(yamlWriter.writeValueAsString(routingRule));
-                    updatedRoutingRulesBuilder.add(routingRule);
-                }
-                else {
-                    yamlContent.append(yamlWriter.writeValueAsString(rule));
-                    updatedRoutingRulesBuilder.add(rule);
-                }
-            }
-            Files.writeString(path, yamlContent.toString(), UTF_8);
-            lock.release();
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException("Failed to parse or update routing rules configuration form path : " + rulesConfigPath, e);
-        }
-        return updatedRoutingRulesBuilder.build();
+        return routingRulesManager.updateRoutingRule(routingRule);
+    }
+
+    @Override
+    public void createRoutingRule(RoutingRule routingRule)
+    {
+        routingRulesManager.createRoutingRule(routingRule);
+    }
+
+    @Override
+    public void deleteRoutingRule(String name)
+    {
+        routingRulesManager.deleteRoutingRule(name);
     }
 }

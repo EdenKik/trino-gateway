@@ -28,7 +28,7 @@ import java.util.concurrent.Executors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-final class TestRoutingRulesManager
+final class TestFileRoutingRulesManager
 {
     @Test
     void testGetRoutingRules()
@@ -39,7 +39,7 @@ final class TestRoutingRulesManager
         String rulesConfigPath = "src/test/resources/rules/routing_rules_atomic.yml";
         routingRulesConfiguration.setRulesConfigPath(rulesConfigPath);
         configuration.setRoutingRules(routingRulesConfiguration);
-        RoutingRulesManager routingRulesManager = new RoutingRulesManager(configuration);
+        IRoutingRulesManager routingRulesManager = new FileRoutingRulesManager(configuration);
 
         List<RoutingRule> result = routingRulesManager.getRoutingRules();
 
@@ -68,7 +68,7 @@ final class TestRoutingRulesManager
         String rulesConfigPath = "src/test/resources/rules/routing_rules_test.yaml";
         routingRulesConfiguration.setRulesConfigPath(rulesConfigPath);
         configuration.setRoutingRules(routingRulesConfiguration);
-        RoutingRulesManager routingRulesManager = new RoutingRulesManager(configuration);
+        IRoutingRulesManager routingRulesManager = new FileRoutingRulesManager(configuration);
 
         assertThatThrownBy(routingRulesManager::getRoutingRules).hasRootCauseInstanceOf(NoSuchFileException.class);
     }
@@ -82,7 +82,7 @@ final class TestRoutingRulesManager
         String rulesConfigPath = "src/test/resources/rules/routing_rules_update.yml";
         routingRulesConfiguration.setRulesConfigPath(rulesConfigPath);
         configuration.setRoutingRules(routingRulesConfiguration);
-        RoutingRulesManager routingRulesManager = new RoutingRulesManager(configuration);
+        IRoutingRulesManager routingRulesManager = new FileRoutingRulesManager(configuration);
 
         RoutingRule routingRules = new RoutingRule("airflow", "if query from airflow, route to etl group", 0, List.of("result.put(\"routingGroup\", \"adhoc\")"), "request.getHeader(\"X-Trino-Source\") == \"JDBC\"");
 
@@ -106,7 +106,7 @@ final class TestRoutingRulesManager
         String rulesConfigPath = "src/test/resources/rules/routing_rules_updated.yaml";
         routingRulesConfiguration.setRulesConfigPath(rulesConfigPath);
         configuration.setRoutingRules(routingRulesConfiguration);
-        RoutingRulesManager routingRulesManager = new RoutingRulesManager(configuration);
+        IRoutingRulesManager routingRulesManager = new FileRoutingRulesManager(configuration);
         RoutingRule routingRules = new RoutingRule("airflow", "if query from airflow, route to etl group", 0, List.of("result.put(\"routingGroup\", \"adhoc\")"), "request.getHeader(\"X-Trino-Source\") == \"JDBC\"");
 
         assertThatThrownBy(() -> routingRulesManager.updateRoutingRule(routingRules)).hasRootCauseInstanceOf(NoSuchFileException.class);
@@ -121,7 +121,7 @@ final class TestRoutingRulesManager
         String rulesConfigPath = "src/test/resources/rules/routing_rules_concurrent.yml";
         routingRulesConfiguration.setRulesConfigPath(rulesConfigPath);
         configuration.setRoutingRules(routingRulesConfiguration);
-        RoutingRulesManager routingRulesManager = new RoutingRulesManager(configuration);
+        IRoutingRulesManager routingRulesManager = new FileRoutingRulesManager(configuration);
 
         RoutingRule routingRule1 = new RoutingRule("airflow", "if query from airflow, route to etl group", 0, List.of("result.put(\"routingGroup\", \"etl\")"), "request.getHeader(\"X-Trino-Source\") == \"airflow\"");
         RoutingRule routingRule2 = new RoutingRule("airflow", "if query from airflow, route to adhoc group", 0, List.of("result.put(\"routingGroup\", \"adhoc\")"), "request.getHeader(\"X-Trino-Source\") == \"datagrip\"");

@@ -43,15 +43,20 @@ import io.trino.gateway.ha.config.RulesExternalConfiguration;
 import io.trino.gateway.ha.persistence.JdbcConnectionManager;
 import io.trino.gateway.ha.persistence.RecordAndAnnotatedConstructorMapper;
 import io.trino.gateway.ha.router.BackendStateManager;
+import io.trino.gateway.ha.router.DatabaseRoutingGroupSelector;
+import io.trino.gateway.ha.router.DatabaseRoutingRulesManager;
+import io.trino.gateway.ha.router.FileRoutingRulesManager;
 import io.trino.gateway.ha.router.ForRouter;
 import io.trino.gateway.ha.router.GatewayBackendManager;
 import io.trino.gateway.ha.router.HaGatewayManager;
 import io.trino.gateway.ha.router.HaQueryHistoryManager;
 import io.trino.gateway.ha.router.HaResourceGroupsManager;
+import io.trino.gateway.ha.router.IRoutingRulesManager;
 import io.trino.gateway.ha.router.PathFilter;
 import io.trino.gateway.ha.router.QueryHistoryManager;
 import io.trino.gateway.ha.router.ResourceGroupsManager;
 import io.trino.gateway.ha.router.RoutingGroupSelector;
+import io.trino.gateway.ha.router.RoutingRulesManager;
 import io.trino.gateway.ha.security.AuthorizationManager;
 import io.trino.gateway.ha.security.LbAuthorizer;
 import io.trino.gateway.ha.security.LbFormAuthManager;
@@ -99,6 +104,10 @@ public class HaGatewayProviderModule
             binder().bind(ContainerRequestFilter.class).to(NoopFilter.class).in(Scopes.SINGLETON);
         }
         binder().bind(ActiveClusterMonitor.class).in(Scopes.SINGLETON);
+
+        binder().bind(FileRoutingRulesManager.class).in(Scopes.SINGLETON);
+        binder().bind(DatabaseRoutingRulesManager.class).in(Scopes.SINGLETON);
+        binder().bind(IRoutingRulesManager.class).to(RoutingRulesManager.class).in(Scopes.SINGLETON);
     }
 
     public HaGatewayProviderModule(HaGatewayConfiguration configuration)
@@ -154,7 +163,10 @@ public class HaGatewayProviderModule
 
     @Provides
     @Singleton
-    public static RoutingGroupSelector getRoutingGroupSelector(@ForRouter HttpClient httpClient, HaGatewayConfiguration configuration)
+    public static RoutingGroupSelector getRoutingGroupSelector(
+            @ForRouter HttpClient httpClient,
+            HaGatewayConfiguration configuration,
+            IRoutingRulesManager routingRulesManager)
     {
         RoutingRulesConfiguration routingRulesConfig = configuration.getRoutingRules();
         if (routingRulesConfig.isRulesEngineEnabled()) {
@@ -168,6 +180,10 @@ public class HaGatewayProviderModule
                         RulesExternalConfiguration rulesExternalConfiguration = routingRulesConfig.getRulesExternalConfiguration();
                         yield RoutingGroupSelector.byRoutingExternal(httpClient, rulesExternalConfiguration, configuration.getRequestAnalyzerConfig());
                     }
+                    case DATABASE -> new DatabaseRoutingGroupSelector(
+                            routingRulesManager,
+                            routingRulesConfig.getRulesRefreshPeriod(),
+                            configuration.getRequestAnalyzerConfig());
                 };
             }
             catch (Exception e) {

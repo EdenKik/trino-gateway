@@ -38,7 +38,6 @@ import io.trino.gateway.ha.resource.PublicResource;
 import io.trino.gateway.ha.resource.TrinoResource;
 import io.trino.gateway.ha.router.ForRouter;
 import io.trino.gateway.ha.router.RoutingManager;
-import io.trino.gateway.ha.router.RoutingRulesManager;
 import io.trino.gateway.ha.router.StochasticRoutingManager;
 import io.trino.gateway.ha.security.AuthorizedExceptionMapper;
 import io.trino.gateway.ha.security.QueryMetadataParser;
@@ -136,7 +135,7 @@ public class BaseApp
         jaxrsBinder(binder).bind(AuthorizedExceptionMapper.class);
         binder.bind(ProxyHandlerStats.class).in(Scopes.SINGLETON);
         newExporter(binder).export(ProxyHandlerStats.class).withGeneratedName();
-        binder.bind(RoutingRulesManager.class);
+
         binder.bind(ClusterMetricsStatsExporter.class).in(Scopes.SINGLETON);
         newOptionalBinder(binder, RoutingManager.class)
                 .setDefault()
