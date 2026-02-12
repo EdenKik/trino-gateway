@@ -30,6 +30,21 @@ public interface GatewayBackendDao
             """)
     GatewayBackend findFirstByName(String name);
 
+    @SqlQuery("""
+            SELECT * FROM gateway_backend
+            WHERE name = :name
+            FETCH FIRST 1 ROWS ONLY
+            """)
+    GatewayBackend findFirstByNameWithFetch(String name);
+
+    default GatewayBackend findFirstByName(String name, boolean isLimitUnsupported)
+    {
+        if (isLimitUnsupported) {
+            return findFirstByNameWithFetch(name);
+        }
+        return findFirstByName(name);
+    }
+
     @SqlUpdate("""
             INSERT INTO gateway_backend (name, routing_group, backend_url, external_url, active)
             VALUES (:name, :routingGroup, :backendUrl, :externalUrl, :active)
@@ -52,10 +67,44 @@ public interface GatewayBackendDao
 
     @SqlUpdate("""
             UPDATE gateway_backend
+            SET active = 0
+            WHERE name = :name
+            """)
+    void deactivateOracle(String name);
+
+    default void deactivate(String name, boolean isOracle)
+    {
+        if (isOracle) {
+            deactivateOracle(name);
+        }
+        else {
+            deactivate(name);
+        }
+    }
+
+    @SqlUpdate("""
+            UPDATE gateway_backend
             SET active = true
             WHERE name = :name
             """)
     void activate(String name);
+
+    @SqlUpdate("""
+            UPDATE gateway_backend
+            SET active = 1
+            WHERE name = :name
+            """)
+    void activateOracle(String name);
+
+    default void activate(String name, boolean isOracle)
+    {
+        if (isOracle) {
+            activateOracle(name);
+        }
+        else {
+            activate(name);
+        }
+    }
 
     @SqlUpdate("""
             DELETE FROM gateway_backend

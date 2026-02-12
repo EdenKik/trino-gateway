@@ -65,15 +65,15 @@ CREATE TABLE IF NOT EXISTS resource_groups_global_properties (
 );
 
 CREATE TABLE IF NOT EXISTS routing_rules (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(128) UNIQUE NOT NULL,
-  description VARCHAR(256),
-  priority INT NOT NULL DEFAULT 0,
-  condition VARCHAR(512) NOT NULL,
-  actions VARCHAR[] NOT NULL,
-  engine VARCHAR(50) NOT NULL DEFAULT 'MVEL',
-  CHECK (priority >= 0)
-  );
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(128) UNIQUE NOT NULL,
+    description VARCHAR(256),
+    priority INT NOT NULL DEFAULT 0,
+    conditionExpression VARCHAR(512) NOT NULL,
+    actions VARCHAR[] NOT NULL,
+    engine VARCHAR(50) NOT NULL DEFAULT 'MVEL',
+    CHECK (priority >= 0)
+);
 
 CREATE TABLE IF NOT EXISTS exact_match_source_selectors (
     resource_group_id VARCHAR(256) NOT NULL,

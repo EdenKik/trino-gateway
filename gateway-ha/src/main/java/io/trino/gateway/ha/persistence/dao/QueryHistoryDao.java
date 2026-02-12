@@ -99,6 +99,22 @@ public interface QueryHistoryDao
     List<QueryHistory> pageQueryHistory(@Define("condition") String condition, @Bind("limit") int limit, @Bind("offset") int offset);
 
     @SqlQuery("""
+            SELECT * FROM query_history
+            WHERE 1 = 1 <condition>
+            ORDER BY created DESC
+            OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY
+            """)
+    List<QueryHistory> pageQueryHistoryOracle(@Define("condition") String condition, @Bind("limit") int limit, @Bind("offset") int offset);
+
+    default List<QueryHistory> pageQueryHistory(String condition, int limit, int offset, boolean isOracle)
+    {
+        if (isOracle) {
+            return pageQueryHistoryOracle(condition, limit, offset);
+        }
+        return pageQueryHistory(condition, limit, offset);
+    }
+
+    @SqlQuery("""
             SELECT count(1) FROM query_history
             WHERE 1 = 1 <condition>
             """)

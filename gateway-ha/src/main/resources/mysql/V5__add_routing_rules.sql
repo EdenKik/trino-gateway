@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS routing_rules (
     name VARCHAR(128) UNIQUE NOT NULL,
     description VARCHAR(256),
     priority INT NOT NULL DEFAULT 0,
-    condition VARCHAR(512) NOT NULL,
+    conditionExpression VARCHAR(512) NOT NULL,
     actions JSON NOT NULL,
     engine VARCHAR(50) NOT NULL DEFAULT 'MVEL',
     CHECK (priority >= 0)

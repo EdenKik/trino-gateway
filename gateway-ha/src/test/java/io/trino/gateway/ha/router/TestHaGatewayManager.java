@@ -43,14 +43,16 @@ final class TestHaGatewayManager
         DatabaseCacheConfiguration cacheConfiguration = new DatabaseCacheConfiguration();
         cacheConfiguration.setEnabled(true);
         cacheConfiguration.setRefreshAfterWrite(new Duration(5, TimeUnit.SECONDS));
-        testGatewayManager(new HaGatewayManager(connectionManager.getJdbi(), new RoutingConfiguration(), cacheConfiguration));
+        testGatewayManager(new HaGatewayManager(connectionManager.getJdbi(), new RoutingConfiguration(),
+                cacheConfiguration, dataStoreConfig()));
     }
 
     @Test
     void testGatewayManagerWithoutCache()
     {
         JdbcConnectionManager connectionManager = createTestingJdbcConnectionManager(dataStoreConfig());
-        testGatewayManager(new HaGatewayManager(connectionManager.getJdbi(), new RoutingConfiguration(), new DatabaseCacheConfiguration()));
+        testGatewayManager(new HaGatewayManager(connectionManager.getJdbi(), new RoutingConfiguration(),
+                new DatabaseCacheConfiguration(), dataStoreConfig()));
     }
 
     void testGatewayManager(HaGatewayManager haGatewayManager)
@@ -70,7 +72,8 @@ final class TestHaGatewayManager
         assertThat(haGatewayManager.getActiveBackends("unknown")).isEmpty();
         assertThat(haGatewayManager.getActiveDefaultBackends()).hasSize(1);
 
-        assertThat(haGatewayManager.getActiveDefaultBackends().getFirst().getExternalUrl()).isEqualTo("adhoc1.external.trino.gateway.io");
+        assertThat(haGatewayManager.getActiveDefaultBackends().getFirst().getExternalUrl())
+                .isEqualTo("adhoc1.external.trino.gateway.io");
 
         // Update a backend
         ProxyBackendConfiguration adhoc = new ProxyBackendConfiguration();
@@ -123,7 +126,8 @@ final class TestHaGatewayManager
         cacheConfiguration.setRefreshAfterWrite(new Duration(3, TimeUnit.SECONDS));
         cacheConfiguration.setExpireAfterWrite(new Duration(5, TimeUnit.SECONDS));
         TestingTicker ticker = new TestingTicker();
-        HaGatewayManager haGatewayManager = new HaGatewayManager(connectionManager.getJdbi(), new RoutingConfiguration(), cacheConfiguration, ticker);
+        HaGatewayManager haGatewayManager = new HaGatewayManager(connectionManager.getJdbi(),
+                new RoutingConfiguration(), cacheConfiguration, dataStoreConfig, ticker);
 
         ProxyBackendConfiguration etl = new ProxyBackendConfiguration();
         etl.setActive(false);
@@ -134,26 +138,34 @@ final class TestHaGatewayManager
         haGatewayManager.addBackend(etl);
 
         // Initial fetch
-        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow()).isEqualTo("https://etl1.trino.gateway.io:443");
+        assertThat(
+                haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow())
+                .isEqualTo("https://etl1.trino.gateway.io:443");
 
         // Read from cache
         destroyTestingDatabase(dataStoreConfig);
-        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow()).isEqualTo("https://etl1.trino.gateway.io:443");
+        assertThat(
+                haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow())
+                .isEqualTo("https://etl1.trino.gateway.io:443");
 
         // Failed to refresh from DB, but still read from cache
         ticker.increment(4, TimeUnit.SECONDS);
-        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow()).isEqualTo("https://etl1.trino.gateway.io:443");
+        assertThat(
+                haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow())
+                .isEqualTo("https://etl1.trino.gateway.io:443");
 
         // Expired from cache, failed to read from DB
         ticker.increment(2, TimeUnit.SECONDS);
-        assertThatThrownBy(() -> haGatewayManager.getBackendByName("new-etl1")).hasMessage("Failed to load backends from database to cache");
+        assertThatThrownBy(() -> haGatewayManager.getBackendByName("new-etl1"))
+                .hasMessage("Failed to load backends from database to cache");
     }
 
     @Test
     void testRemoveTrailingSlashInUrl()
     {
         JdbcConnectionManager connectionManager = createTestingJdbcConnectionManager(dataStoreConfig());
-        HaGatewayManager haGatewayManager = new HaGatewayManager(connectionManager.getJdbi(), new RoutingConfiguration(), new DatabaseCacheConfiguration());
+        HaGatewayManager haGatewayManager = new HaGatewayManager(connectionManager.getJdbi(),
+                new RoutingConfiguration(), new DatabaseCacheConfiguration(), dataStoreConfig());
 
         ProxyBackendConfiguration etl = new ProxyBackendConfiguration();
         etl.setActive(false);
@@ -163,8 +175,11 @@ final class TestHaGatewayManager
         etl.setExternalUrl("https://etl1.trino.gateway.io:443/");
         haGatewayManager.addBackend(etl);
 
-        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow()).isEqualTo("https://etl1.trino.gateway.io:443");
-        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getExternalUrl).orElseThrow()).isEqualTo("https://etl1.trino.gateway.io:443");
+        assertThat(
+                haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow())
+                .isEqualTo("https://etl1.trino.gateway.io:443");
+        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getExternalUrl)
+                .orElseThrow()).isEqualTo("https://etl1.trino.gateway.io:443");
 
         ProxyBackendConfiguration etl2 = new ProxyBackendConfiguration();
         etl2.setActive(false);
@@ -174,8 +189,11 @@ final class TestHaGatewayManager
         etl2.setExternalUrl("https://etl2.trino.gateway.io:443/");
         haGatewayManager.updateBackend(etl2);
 
-        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow()).isEqualTo("https://etl2.trino.gateway.io:443");
-        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getExternalUrl).orElseThrow()).isEqualTo("https://etl2.trino.gateway.io:443");
+        assertThat(
+                haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getProxyTo).orElseThrow())
+                .isEqualTo("https://etl2.trino.gateway.io:443");
+        assertThat(haGatewayManager.getBackendByName("new-etl1").map(ProxyBackendConfiguration::getExternalUrl)
+                .orElseThrow()).isEqualTo("https://etl2.trino.gateway.io:443");
     }
 
     public static class TestingTicker

@@ -34,7 +34,7 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 @RolesAllowed("ADMIN")
-@Path("/gateway/rules")
+@Path("/rules")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class RoutingRulesResource

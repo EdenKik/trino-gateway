@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.airlift.stats.CounterStat;
+import io.trino.gateway.ha.config.DataStoreConfiguration;
 import io.trino.gateway.ha.config.DatabaseCacheConfiguration;
 import io.trino.gateway.ha.config.ProxyBackendConfiguration;
 import io.trino.gateway.ha.config.RoutingConfiguration;
@@ -47,22 +48,24 @@ public class HaGatewayManager
     private final String defaultRoutingGroup;
     private final boolean cacheEnabled;
     private final LoadingCache<Object, List<GatewayBackend>> backendCache;
+    private final boolean isOracleBackend;
 
     private final CounterStat backendLookupSuccesses = new CounterStat();
     private final CounterStat backendLookupFailures = new CounterStat();
 
     @Inject
-    public HaGatewayManager(Jdbi jdbi, RoutingConfiguration routingConfiguration, DatabaseCacheConfiguration databaseCacheConfiguration)
+    public HaGatewayManager(Jdbi jdbi, RoutingConfiguration routingConfiguration, DatabaseCacheConfiguration databaseCacheConfiguration, DataStoreConfiguration dataStoreConfiguration)
     {
-        this(jdbi, routingConfiguration, databaseCacheConfiguration, Ticker.systemTicker());
+        this(jdbi, routingConfiguration, databaseCacheConfiguration, dataStoreConfiguration, Ticker.systemTicker());
     }
 
     @VisibleForTesting
-    public HaGatewayManager(Jdbi jdbi, RoutingConfiguration routingConfiguration, DatabaseCacheConfiguration databaseCacheConfiguration, Ticker ticker)
+    public HaGatewayManager(Jdbi jdbi, RoutingConfiguration routingConfiguration, DatabaseCacheConfiguration databaseCacheConfiguration, DataStoreConfiguration dataStoreConfiguration, Ticker ticker)
     {
         dao = requireNonNull(jdbi, "jdbi is null").onDemand(GatewayBackendDao.class);
         defaultRoutingGroup = routingConfiguration.getDefaultRoutingGroup();
         cacheEnabled = databaseCacheConfiguration.isEnabled();
+        this.isOracleBackend = dataStoreConfiguration.getJdbcUrl().startsWith("jdbc:oracle");
         if (cacheEnabled) {
             Caffeine<Object, Object> caffeineBuilder = Caffeine.newBuilder()
                     .initialCapacity(1)
@@ -176,18 +179,18 @@ public class HaGatewayManager
     @Override
     public void deactivateBackend(String backendName)
     {
-        updateClusterActivationStatus(backendName, false, () -> dao.deactivate(backendName));
+        updateClusterActivationStatus(backendName, false, () -> dao.deactivate(backendName, isOracleBackend));
     }
 
     @Override
     public void activateBackend(String backendName)
     {
-        updateClusterActivationStatus(backendName, true, () -> dao.activate(backendName));
+        updateClusterActivationStatus(backendName, true, () -> dao.activate(backendName, isOracleBackend));
     }
 
     private void updateClusterActivationStatus(String clusterName, boolean newStatus, Runnable changeActiveStatus)
     {
-        GatewayBackend model = dao.findFirstByName(clusterName);
+        GatewayBackend model = dao.findFirstByName(clusterName, isOracleBackend);
         checkState(model != null, "No cluster found with name: %s, could not (de)activate", clusterName);
 
         boolean previousStatus = model.active();

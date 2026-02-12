@@ -64,6 +64,12 @@ public class JdbcConnectionManager
                 .registerRowMapper(new RecordAndAnnotatedConstructorMapper());
     }
 
+    public boolean isOracle()
+    {
+        String url = configuration.getJdbcUrl();
+        return url != null && url.startsWith("jdbc:oracle");
+    }
+
     @VisibleForTesting
     String buildJdbcUrl(@Nullable String routingGroupDatabase)
     {

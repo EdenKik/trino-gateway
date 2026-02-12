@@ -32,6 +32,21 @@ public interface RoutingRulesDao
             """)
     RoutingRuleEntity findByName(@Bind("name") String name);
 
+    @SqlQuery("""
+            SELECT * FROM routing_rules
+            WHERE name = :name
+            FETCH FIRST 1 ROWS ONLY
+            """)
+    RoutingRuleEntity findByNameWithFetch(@Bind("name") String name);
+
+    default RoutingRuleEntity findByName(String name, boolean isLimitUnsupported)
+    {
+        if (isLimitUnsupported) {
+            return findByNameWithFetch(name);
+        }
+        return findByName(name);
+    }
+
     @SqlUpdate("""
             INSERT INTO routing_rules (name, description, priority, condition, actions, engine)
             VALUES (:name, :description, :priority, :condition, :actions, :engine)

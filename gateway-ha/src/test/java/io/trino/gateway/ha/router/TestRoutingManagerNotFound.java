@@ -34,7 +34,7 @@ final class TestRoutingManagerNotFound
         RoutingConfiguration routingConfiguration = new RoutingConfiguration();
         routingConfiguration.setDefaultRoutingGroup("default");
 
-        GatewayBackendManager backendManager = new HaGatewayManager(connectionManager.getJdbi(), routingConfiguration, new DatabaseCacheConfiguration());
+        GatewayBackendManager backendManager = new HaGatewayManager(connectionManager.getJdbi(), routingConfiguration, new DatabaseCacheConfiguration(), dataStoreConfig);
         QueryHistoryManager historyManager = new HaQueryHistoryManager(connectionManager.getJdbi(), dataStoreConfig);
 
         this.routingManager = new StochasticRoutingManager(backendManager, historyManager, routingConfiguration);

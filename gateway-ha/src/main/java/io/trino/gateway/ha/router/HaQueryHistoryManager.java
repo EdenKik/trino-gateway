@@ -132,7 +132,7 @@ public class HaQueryHistoryManager
         if (!Strings.isNullOrEmpty(query.source())) {
             condition += " and source = '" + query.source() + "'";
         }
-        List<QueryHistory> histories = dao.pageQueryHistory(condition, query.size(), start);
+        List<QueryHistory> histories = dao.pageQueryHistory(condition, query.size(), start, isOracleBackend);
         List<QueryDetail> rows = upcast(histories);
         Long total = dao.count(condition);
         return TableData.build(rows, total);

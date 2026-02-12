@@ -178,7 +178,7 @@ final class TestQueryCountBasedRouter
     {
         DataStoreConfiguration dataStoreConfig = dataStoreConfig();
         JdbcConnectionManager connectionManager = createTestingJdbcConnectionManager(dataStoreConfig);
-        backendManager = new HaGatewayManager(connectionManager.getJdbi(), routingConfiguration, new DatabaseCacheConfiguration());
+        backendManager = new HaGatewayManager(connectionManager.getJdbi(), routingConfiguration, new DatabaseCacheConfiguration(), dataStoreConfig);
         historyManager = new HaQueryHistoryManager(connectionManager.getJdbi(), dataStoreConfig);
         queryCountBasedRouter = new QueryCountBasedRouter(backendManager, historyManager, routingConfiguration);
         populateData();

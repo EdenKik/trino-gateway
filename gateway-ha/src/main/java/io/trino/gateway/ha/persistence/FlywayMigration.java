@@ -47,9 +47,13 @@ public class FlywayMigration
             return;
         }
         log.info("Performing migrations...");
+        String location = getLocation(config.getJdbcUrl());
+        log.info("Performing migrations for URL: %s", config.getJdbcUrl());
+        log.info("Selected migration location: %s", location);
+
         Flyway flyway = Flyway.configure()
                 .dataSource(config.getJdbcUrl(), config.getUser(), config.getPassword())
-                .locations(getLocation(config.getJdbcUrl()))
+                .locations(location)
                 .baselineOnMigrate(true)
                 .baselineVersion("0")
                 .load();

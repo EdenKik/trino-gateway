@@ -41,7 +41,8 @@ final class TestStochasticRoutingManager
         DataStoreConfiguration dataStoreConfig = dataStoreConfig();
         JdbcConnectionManager connectionManager = createTestingJdbcConnectionManager(dataStoreConfig);
         RoutingConfiguration routingConfiguration = new RoutingConfiguration();
-        backendManager = new HaGatewayManager(connectionManager.getJdbi(), routingConfiguration, new DatabaseCacheConfiguration());
+        backendManager = new HaGatewayManager(connectionManager.getJdbi(), routingConfiguration,
+                new DatabaseCacheConfiguration(), dataStoreConfig);
         historyManager = new HaQueryHistoryManager(connectionManager.getJdbi(), dataStoreConfig);
         haRoutingManager = new StochasticRoutingManager(backendManager, historyManager, routingConfiguration);
     }
@@ -61,11 +62,11 @@ final class TestStochasticRoutingManager
             proxyBackend.setProxyTo(backend + ".trino.example.com");
             proxyBackend.setExternalUrl("trino.example.com");
             backendManager.addBackend(proxyBackend);
-            //set backend as healthy to start with
+            // set backend as healthy to start with
             haRoutingManager.updateBackEndHealth(backend, TrinoStatus.HEALTHY);
         }
 
-        //Keep only 1st backend as healthy, mark all the others as unhealthy
+        // Keep only 1st backend as healthy, mark all the others as unhealthy
         assertThat(backendManager.getAllActiveBackends()).isNotEmpty();
 
         for (int i = 1; i < numBackends; i++) {
